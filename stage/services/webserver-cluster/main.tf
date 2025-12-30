@@ -119,12 +119,11 @@ resource "aws_launch_template" "example" {
   image_id      = "ami-00e428798e77d38d9"
   instance_type = "t3.micro"
 
-  user_data = base64encode(<<-EOF
-      #!/bin/bash
-      echo "Hello, World" > index.html
-      nohup python3 -m http.server ${var.server_port} &
-    EOF
-  )
+  user_data = templatefile("user-data.sh", {
+    server_port = var.server_port
+    db_address  = data.terraform_remote_state.db.outputs.address
+    db_port     = data.terraform_remote_state.db.outputs.port
+  })
 
   network_interfaces {
     associate_public_ip_address = true
@@ -158,5 +157,12 @@ resource "aws_autoscaling_group" "example" {
 }
 
 
+data "terraform_remote_state" "db" {
+  backend = "s3"
 
-
+  config = {
+    bucket = "terraform-up-and-running-state-valkyray-187457215304"
+    key    = "stage/data-stores/mysql/terraform.tfstate"
+    region = "us-east-2"
+  }
+}
