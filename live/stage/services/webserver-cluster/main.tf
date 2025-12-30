@@ -14,7 +14,7 @@ provider "aws" {
 }
 
 module "webserver-cluster" {
-  source = "../../../modules/services/webserver-cluster"
+  source = "git@github.com:valkyraycho/terraform-practice.git//modules/services/webserver-cluster?ref=v0.0.1"
 
   cluster_name           = "webservers-stage"
   db_remote_state_bucket = "terraform-up-and-running-state-valkyray-187457215304"
