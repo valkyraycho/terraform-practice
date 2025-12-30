@@ -1,14 +1,3 @@
-terraform {
-  backend "s3" {
-    bucket = "terraform-up-and-running-state-valkyray-187457215304"
-    key    = "stage/services/webserver-cluster/terraform.tfstate"
-    region = "us-east-2"
-
-    dynamodb_table = "terraform-up-and-running-locks"
-    encrypt        = true
-  }
-}
-
 provider "aws" {
   region = "us-east-2"
 }
@@ -26,7 +15,7 @@ data "aws_subnets" "default" {
 
 
 resource "aws_lb" "example" {
-  name               = "terraform-asg-example"
+  name               = var.cluster_name
   load_balancer_type = "application"
   subnets            = data.aws_subnets.default.ids
   security_groups    = [aws_security_group.alb.id]
@@ -35,7 +24,7 @@ resource "aws_lb" "example" {
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.example.arn
   protocol          = "HTTP"
-  port              = 80
+  port              = local.http_port
 
   default_action {
     type = "fixed-response"
@@ -49,27 +38,27 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_security_group" "alb" {
-  name = "terraform-example-alb"
+  name = "${var.cluster_name}-alb"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {
-  ip_protocol       = "tcp"
+  ip_protocol       = local.tcp_protocol
   security_group_id = aws_security_group.alb.id
 
-  cidr_ipv4 = "0.0.0.0/0"
-  from_port = 80
-  to_port   = 80
+  cidr_ipv4 = local.all_ips
+  from_port = local.http_port
+  to_port   = local.http_port
 }
 
 resource "aws_vpc_security_group_egress_rule" "alb_http" {
-  ip_protocol       = "-1"
+  ip_protocol       = local.any_protocol
   security_group_id = aws_security_group.alb.id
 
-  cidr_ipv4 = "0.0.0.0/0"
+  cidr_ipv4 = local.all_ips
 }
 
 resource "aws_lb_target_group" "asg" {
-  name     = "terraform-asg-example"
+  name     = var.cluster_name
   port     = var.server_port
   protocol = "HTTP"
   vpc_id   = data.aws_vpc.default.id
@@ -102,14 +91,14 @@ resource "aws_lb_listener_rule" "asg" {
 }
 
 resource "aws_security_group" "instance" {
-  name = "terraform-example-instance"
+  name = "${var.cluster_name}-instance"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "example" {
-  ip_protocol       = "tcp"
+  ip_protocol       = local.tcp_protocol
   security_group_id = aws_security_group.instance.id
 
-  cidr_ipv4 = "0.0.0.0/0"
+  cidr_ipv4 = local.all_ips
   from_port = var.server_port
   to_port   = var.server_port
 }
@@ -117,13 +106,13 @@ resource "aws_vpc_security_group_ingress_rule" "example" {
 resource "aws_launch_template" "example" {
   name_prefix   = "example-"
   image_id      = "ami-00e428798e77d38d9"
-  instance_type = "t3.micro"
+  instance_type = var.instance_type
 
-  user_data = templatefile("user-data.sh", {
+  user_data = base64encode(templatefile("${path.module}/user-data.sh", {
     server_port = var.server_port
     db_address  = data.terraform_remote_state.db.outputs.address
     db_port     = data.terraform_remote_state.db.outputs.port
-  })
+  }))
 
   network_interfaces {
     associate_public_ip_address = true
@@ -141,12 +130,12 @@ resource "aws_autoscaling_group" "example" {
   target_group_arns = [aws_lb_target_group.asg.arn]
   health_check_type = "ELB"
 
-  min_size = 2
-  max_size = 10
+  min_size = var.min_size
+  max_size = var.max_size
 
   tag {
     key                 = "Name"
-    value               = "terraform-asg-example"
+    value               = var.cluster_name
     propagate_at_launch = true
   }
 
@@ -161,8 +150,8 @@ data "terraform_remote_state" "db" {
   backend = "s3"
 
   config = {
-    bucket = "terraform-up-and-running-state-valkyray-187457215304"
-    key    = "stage/data-stores/mysql/terraform.tfstate"
+    bucket = var.db_remote_state_bucket
+    key    = var.db_remote_state_key
     region = "us-east-2"
   }
 }
