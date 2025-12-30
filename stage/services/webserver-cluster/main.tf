@@ -1,3 +1,14 @@
+terraform {
+  backend "s3" {
+    bucket = "terraform-up-and-running-state-valkyray-187457215304"
+    key    = "stage/services/webserver-cluster/terraform.tfstate"
+    region = "us-east-2"
+
+    dynamodb_table = "terraform-up-and-running-locks"
+    encrypt        = true
+  }
+}
+
 provider "aws" {
   region = "us-east-2"
 }
@@ -13,18 +24,6 @@ data "aws_subnets" "default" {
   }
 }
 
-resource "aws_security_group" "instance" {
-  name = "terraform-example-instance"
-}
-
-resource "aws_vpc_security_group_ingress_rule" "example" {
-  ip_protocol       = "tcp"
-  security_group_id = aws_security_group.instance.id
-
-  cidr_ipv4 = "0.0.0.0/0"
-  from_port = var.server_port
-  to_port   = var.server_port
-}
 
 resource "aws_lb" "example" {
   name               = "terraform-asg-example"
@@ -102,6 +101,19 @@ resource "aws_lb_listener_rule" "asg" {
   }
 }
 
+resource "aws_security_group" "instance" {
+  name = "terraform-example-instance"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "example" {
+  ip_protocol       = "tcp"
+  security_group_id = aws_security_group.instance.id
+
+  cidr_ipv4 = "0.0.0.0/0"
+  from_port = var.server_port
+  to_port   = var.server_port
+}
+
 resource "aws_launch_template" "example" {
   name_prefix   = "example-"
   image_id      = "ami-00e428798e77d38d9"
@@ -147,14 +159,4 @@ resource "aws_autoscaling_group" "example" {
 
 
 
-variable "server_port" {
-  description = "The port the server will use for HTTP requests"
-  type        = number
-  default     = 8080
-}
 
-
-output "alb_dns_name" {
-  value       = aws_lb.example.dns_name
-  description = "The domain name of the load balancer"
-}
