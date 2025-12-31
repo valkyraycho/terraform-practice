@@ -112,6 +112,7 @@ resource "aws_launch_template" "example" {
     server_port = var.server_port
     db_address  = data.terraform_remote_state.db.outputs.address
     db_port     = data.terraform_remote_state.db.outputs.port
+    server_text = var.server_text
   }))
 
   network_interfaces {
@@ -125,25 +126,68 @@ resource "aws_launch_template" "example" {
 }
 
 resource "aws_autoscaling_group" "example" {
+  name                = "${var.cluster_name}-${aws_launch_template.example.name}"
   vpc_zone_identifier = data.aws_subnets.default.ids
 
   target_group_arns = [aws_lb_target_group.asg.arn]
   health_check_type = "ELB"
+  min_elb_capacity  = var.min_size
 
   min_size = var.min_size
   max_size = var.max_size
 
+  launch_template {
+    id      = aws_launch_template.example.id
+    version = "$Latest"
+  }
   tag {
     key                 = "Name"
     value               = var.cluster_name
     propagate_at_launch = true
   }
 
-  launch_template {
-    id      = aws_launch_template.example.id
-    version = "$Latest"
+  dynamic "tag" {
+    for_each = {
+      for key, value in va.var.custom_tags :
+      key => upper(value)
+      if key != "Name"
+    }
+
+    content {
+      key                 = tag.key
+      value               = tag.value
+      propagate_at_launch = true
+    }
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
+
+resource "aws_autoscaling_schedule" "scale_out_during_business_hours" {
+  count                  = var.enable_autoscaling ? 1 : 0
+  autoscaling_group_name = module.webserver-cluster.asg_name
+  scheduled_action_name  = "scale-out-during-business-hours"
+
+  min_size         = 2
+  max_size         = 10
+  desired_capacity = 10
+
+  recurrence = "0 9 * * *"
+}
+resource "aws_autoscaling_schedule" "scale_in_at_night" {
+  count                  = var.enable_autoscaling ? 1 : 0
+  autoscaling_group_name = module.webserver-cluster.asg_name
+  scheduled_action_name  = "scale-in-at-night"
+
+  min_size         = 2
+  max_size         = 10
+  desired_capacity = 2
+
+  recurrence = "0 17 * * *"
+}
+
 
 
 data "terraform_remote_state" "db" {

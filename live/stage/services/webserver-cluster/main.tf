@@ -14,15 +14,18 @@ provider "aws" {
 }
 
 module "webserver-cluster" {
-  source = "git@github.com:valkyraycho/terraform-practice.git//modules/services/webserver-cluster?ref=v0.0.1"
+  source = "../../../modules/services/webserver-cluster"
+
+  server_text = "New stage server!"
 
   cluster_name           = "webservers-stage"
   db_remote_state_bucket = "terraform-up-and-running-state-valkyray-187457215304"
   db_remote_state_key    = "stage/data-stores/mysql/terraform.tfstate"
 
-  instance_type = "t3.micro"
-  min_size      = 2
-  max_size      = 2
+  instance_type      = "t3.micro"
+  min_size           = 2
+  max_size           = 2
+  enable_autoscaling = false
 }
 
 resource "aws_vpc_security_group_ingress_rule" "allow_testing_inbound" {
