@@ -7,6 +7,10 @@ terraform {
   }
 }
 
+data "aws_ec2_instance_type" "instance" {
+  instance_type = var.instance_type
+}
+
 resource "aws_launch_template" "example" {
   name_prefix   = "example-"
   image_id      = var.ami
@@ -21,6 +25,10 @@ resource "aws_launch_template" "example" {
 
   lifecycle {
     create_before_destroy = true
+    precondition {
+      condition     = data.aws_ec2_instance_type.instance.free_tier_eligible
+      error_message = "${var.instance_type} is not free tier eligible"
+    }
   }
 }
 
@@ -61,6 +69,13 @@ resource "aws_autoscaling_group" "example" {
     strategy = "Rolling"
     preferences {
       min_healthy_percentage = 50
+    }
+  }
+
+  lifecycle {
+    postcondition {
+      condition     = length(self.availability_zones) > 0
+      error_message = "ASG must have at least one availability zone"
     }
   }
 }

@@ -6,16 +6,41 @@ variable "cluster_name" {
 variable "instance_type" {
   description = "The type of EC2 Instances to run (e.g. t3.micro)"
   type        = string
+
+  validation {
+    condition     = var.instance_type == "t3.micro"
+    error_message = "Only free tier is allowed: t3.micro"
+  }
 }
 
 variable "min_size" {
   description = "The minimum number of EC2 Instances in the ASG"
   type        = number
+
+  validation {
+    condition     = var.min_size > 0
+    error_message = "The min_size must be greater than 0"
+  }
+
+  validation {
+    condition     = var.min_size <= 10
+    error_message = "The min_size must be less than or equal to 10"
+  }
 }
 
 variable "max_size" {
   description = "The maximum number of EC2 Instances in the ASG"
   type        = number
+
+  validation {
+    condition     = var.max_size > 0
+    error_message = "The max_size must be greater than 0"
+  }
+  validation {
+    condition     = var.max_size <= 10
+    error_message = "The max_size must be less than or equal to 10"
+  }
+
 }
 
 variable "custom_tags" {
@@ -58,6 +83,11 @@ variable "health_check_type" {
   description = "The type of health check to perform. Must be one of: EC2, ELB"
   type        = string
   default     = "EC2"
+
+  validation {
+    condition     = contains(["EC2", "ELB"], var.health_check_type)
+    error_message = "The health_check_type must be one of: EC2, ELB"
+  }
 }
 
 variable "user_data" {
