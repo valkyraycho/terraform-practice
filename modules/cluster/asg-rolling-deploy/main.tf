@@ -9,7 +9,7 @@ terraform {
 
 resource "aws_launch_template" "example" {
   name_prefix   = "example-"
-  image_id      = "ami-00e428798e77d38d9"
+  image_id      = var.ami
   instance_type = var.instance_type
 
   user_data = var.user_data
@@ -67,7 +67,7 @@ resource "aws_autoscaling_group" "example" {
 
 resource "aws_autoscaling_schedule" "scale_out_during_business_hours" {
   count                  = var.enable_autoscaling ? 1 : 0
-  autoscaling_group_name = module.webserver-cluster.asg_name
+  autoscaling_group_name = aws_autoscaling_group.example.name
   scheduled_action_name  = "scale-out-during-business-hours"
 
   min_size         = 2
@@ -78,7 +78,7 @@ resource "aws_autoscaling_schedule" "scale_out_during_business_hours" {
 }
 resource "aws_autoscaling_schedule" "scale_in_at_night" {
   count                  = var.enable_autoscaling ? 1 : 0
-  autoscaling_group_name = module.webserver-cluster.asg_name
+  autoscaling_group_name = aws_autoscaling_group.example.name
   scheduled_action_name  = "scale-in-at-night"
 
   min_size         = 2
