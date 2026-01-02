@@ -1,4 +1,11 @@
 terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.0"
+    }
+  }
+
   backend "s3" {
     bucket = "terraform-up-and-running-state-valkyray-187457215304"
     key    = "prod/data-stores/mysql/terraform.tfstate"
@@ -11,16 +18,35 @@ terraform {
 
 provider "aws" {
   region = "us-east-2"
+  alias  = "primary"
 }
 
-resource "aws_db_instance" "example" {
-  instance_class      = "db.t3.micro"
-  identifier_prefix   = "terraform-up-and-running"
-  engine              = "mysql"
-  allocated_storage   = 10
-  db_name             = var.db_name
-  skip_final_snapshot = true
+provider "aws" {
+  region = "us-west-1"
+  alias  = "replica"
+}
 
-  username = var.db_username
-  password = var.db_password
+module "mysql_primary" {
+  source = "../../../../modules/data-stores/mysql"
+
+  providers = {
+    aws = aws.primary
+  }
+
+  db_name = "prod_db"
+
+  db_username = var.db_username
+  db_password = var.db_password
+
+  backup_retention_period = 1
+}
+
+module "mysql_replica" {
+  source = "../../../../modules/data-stores/mysql"
+
+  providers = {
+    aws = aws.replica
+  }
+
+  replicate_source_db = module.mysql_primary.arn
 }

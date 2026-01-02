@@ -126,12 +126,10 @@ resource "aws_launch_template" "example" {
 }
 
 resource "aws_autoscaling_group" "example" {
-  name                = "${var.cluster_name}-${aws_launch_template.example.name}"
   vpc_zone_identifier = data.aws_subnets.default.ids
 
   target_group_arns = [aws_lb_target_group.asg.arn]
   health_check_type = "ELB"
-  min_elb_capacity  = var.min_size
 
   min_size = var.min_size
   max_size = var.max_size
@@ -148,7 +146,7 @@ resource "aws_autoscaling_group" "example" {
 
   dynamic "tag" {
     for_each = {
-      for key, value in va.var.custom_tags :
+      for key, value in var.custom_tags :
       key => upper(value)
       if key != "Name"
     }
@@ -160,8 +158,11 @@ resource "aws_autoscaling_group" "example" {
     }
   }
 
-  lifecycle {
-    create_before_destroy = true
+  instance_refresh {
+    strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = 50
+    }
   }
 }
 
