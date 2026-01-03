@@ -1,11 +1,13 @@
 variable "db_remote_state_bucket" {
   description = "The name of the S3 bucket for the database's remote state"
   type        = string
+  default     = null
 }
 
 variable "db_remote_state_key" {
   description = "The path for the database's remote state in S3"
   type        = string
+  default     = null
 }
 
 
@@ -48,9 +50,32 @@ variable "enable_autoscaling" {
 variable "server_port" {
   description = "The port the server will use for HTTP requests"
   type        = number
+  default     = 8080
 }
 
 variable "server_text" {
   description = "The text the web server should return"
   type        = string
+  default     = "Hello, World"
+}
+
+variable "vpc_id" {
+  description = "The ID of the VPC"
+  type        = string
+  default     = null
+}
+
+variable "subnet_ids" {
+  description = "The IDs of the subnets"
+  type        = list(string)
+  default     = null
+}
+
+variable "mysql_config" {
+  description = "The configuration for the MySQL database"
+  type = object({
+    address = string
+    port    = number
+  })
+  default = null
 }
