@@ -21,6 +21,12 @@ resource "aws_s3_bucket" "tf_state" {
   }
 }
 
+resource "aws_s3_bucket" "testing_stg" {
+  bucket = "terraform-up-and-running-state-stg-valkyray-187457215304"
+}
+
+
+
 
 resource "aws_s3_bucket_versioning" "enabled" {
   bucket = aws_s3_bucket.tf_state.id
