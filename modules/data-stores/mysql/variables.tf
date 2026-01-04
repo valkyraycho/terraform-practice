@@ -29,3 +29,9 @@ variable "replicate_source_db" {
   type        = string
   default     = null
 }
+
+variable "publicly_accessible" {
+  description = "If true, the database will be publicly accessible"
+  type        = bool
+  default     = false
+}

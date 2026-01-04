@@ -23,4 +23,6 @@ resource "aws_db_instance" "example" {
 
   backup_retention_period = var.backup_retention_period
   replicate_source_db     = var.replicate_source_db
+
+  publicly_accessible = var.publicly_accessible
 }
